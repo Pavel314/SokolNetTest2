@@ -11,16 +11,28 @@ jobs:
           - name: checkout
             uses: actions/checkout@v4
 
+          - name: Checkout Sokol.NET Framework
+            uses: actions/checkout@v4
+            with:
+              repository: Pavel314/Sokol.NET
+              path: Sokol.NET
+
           - name: Setup .NET SDK
             uses: actions/setup-dotnet@v4
             with:
               dotnet-version: '10.0.x' #TODO global.json
 
+          - name: Configure SokolNetHome Path
+            run: mkdir -p ~/.sokolnet_config && readlink -f Sokol.NET > ~/.sokolnet_config/sokolnet_home
+
+          - name: Removal of unnecessary files
+            run: find . -maxdepth 1 -type f \( -name "*.sln" -o -name "*.csproj" \) ! -name "*Web.csproj" -delete
+
           - name: Install required .NET workloads
-            run: dotnet workload restore $(ls *Web.csproj)
+            run: dotnet workload restore #$(ls *Web.csproj)
 
           - name: Restore dependencies
-            run: dotnet restore $(ls *Web.csproj)
+            run: dotnet restore #$(ls *Web.csproj)
 
 # jobs:
 #   build:
