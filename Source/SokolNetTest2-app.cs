@@ -89,7 +89,7 @@ public static unsafe class Sokolnettest2App
         igSetNextWindowSize(new Vector2(300, 150), ImGuiCond.FirstUseEver);
 
         byte open = 1;
-        if (igBegin("Debug PanelNew", ref open, 0))
+        if (igBegin("Debug PanelNew2", ref open, 0))
         {
             igText("Sokol.NET Web & Touch Test");
             igText($"DPI Scale: {dpi:F2}");
