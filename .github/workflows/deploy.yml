@@ -1,0 +1,69 @@
+name: Webversion and Deploy
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    # 1. Скачиваем официальный фреймворк Sokol.NET в папку framework
+    - name: Checkout Sokol.NET Framework
+      uses: actions/checkout@v4
+      with:
+        repository: elix22/Sokol.NET
+        path: framework
+
+    # 2. Скачиваем твой личный проект в папку project
+    - name: Checkout your project code
+      uses: actions/checkout@v4
+      with:
+        path: project
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Configure SokolNetHome Path
+      run: |
+        mkdir -p ~/.sokolnet_config
+        echo "${{ github.workspace }}/framework" > ~/.sokolnet_config/sokolnet_home
+
+    # Твоя дзен-фишка: Уничтожаем файл решения и все десктопные проекты, оставляя только веб-модуль
+    - name: Purge solution and non-web projects
+      run: |
+        cd project
+        echo "Purging non-web files..."
+        rm -f *.sln
+        find . -maxdepth 1 -type f -name "*.csproj" ! -name "*Web.csproj" -delete
+
+    # Установка инструментов WebAssembly
+    - name: Install WASM Tools workload
+      run: |
+        cd project
+        dotnet workload restore
+
+    # Восстановление NuGet-пакетов
+    - name: Restore dependencies
+      run: |
+        cd project
+        dotnet restore
+
+    # Компиляция C# кода в Native AOT WebAssembly
+    - name: Build webversion
+      run: |
+        cd project
+        dotnet publish -c Release -r browser-wasm -o out
+
+    # Деплой готовой статики Sokol.NET на хостинг GitHub Pages
+    - name: Deploy to GitHub Pages
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./project/wwwroot
+        enable_jekyll: false
+        allow_empty_commit: false
+        force_orphan: true
