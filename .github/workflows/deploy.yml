@@ -49,19 +49,20 @@ jobs:
     - name: Build webversion
       run: |
         cd project
-        # Собираем проект стандартным для Sokol.NET путем
+        # Компилируем веб-версию
         dotnet publish -c Release -r browser-wasm
         
-        # Создаем .nojekyll прямо в итоговой wwwroot проекта, откуда пойдет деплой!
+        # Жестко создаем маркеры .nojekyll везде, чтобы обойти блокировку серверов GitHub
         touch wwwroot/.nojekyll
+        touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll
 
     - name: Deploy to GitHub Pages
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        # Публикуем именно роднуюwwwroot, куда .NET скопировал AppBundle со всеми .js скриптами
-        publish_dir: ./project/wwwroot
+        # МЕНЯЕМ ПУТЬ: Берем чистый, сгенерированный компилятором .NET пакет напрямую!
+        publish_dir: ./project/bin/Release/net10.0/browser-wasm/AppBundle
         enable_jekyll: false
         allow_empty_commit: false
         force_orphan: true
