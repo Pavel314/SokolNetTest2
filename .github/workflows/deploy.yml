@@ -5,34 +5,89 @@ on: [push, pull_request]
 jobs:
     build:
         runs-on: ubuntu-latest
-#       permissions:
-#       contents: write
+        permissions:
+            contents: write
         steps:
           - name: checkout
             uses: actions/checkout@v4
+            with:
+              path: proj
 
           - name: Checkout Sokol.NET Framework
             uses: actions/checkout@v4
             with:
               repository: Pavel314/Sokol.NET
               path: Sokol.NET
+              #VERY SLOW submodules: recursive
 
           - name: Setup .NET SDK
             uses: actions/setup-dotnet@v4
             with:
               dotnet-version: '10.0.x' #TODO global.json
 
-          - name: Configure SokolNetHome Path
-            run: mkdir -p ~/.sokolnet_config && readlink -f Sokol.NET > ~/.sokolnet_config/sokolnet_home
+          - name: Register Sokol.NET
+            run: cd Sokol.NET && chmod +x register.sh && ./register.sh
 
           - name: Removal of unnecessary files
-            run: find . -maxdepth 1 -type f \( -name "*.sln" -o -name "*.csproj" \) ! -name "*Web.csproj" -delete
+            run: cd proj && find . -maxdepth 1 -type f \( -name "*.sln" -o -name "*.csproj" \) ! -name "*Web.csproj" -delete
 
           - name: Install required .NET workloads
-            run: dotnet workload restore #$(ls *Web.csproj)
+            run: cd proj && dotnet workload restore
 
-          - name: Restore dependencies
-            run: dotnet restore #$(ls *Web.csproj)
+          - name: Prepare shaders
+            run: cd Sokol.NET && dotnet run --project tools/SokolApplicationBuilder -- --task prepare --architecture web --path "../proj"
+
+          - name: Compiling .NET Web Assembly
+            run: |
+                cd proj
+                dotnet publish -c Release -r browser-wasm
+                #touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll 
+
+          - name: Deploy to GitHub Pages
+            if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            uses: peaceiris/actions-gh-pages@v4
+            with:
+                github_token: ${{ secrets.GITHUB_TOKEN }}
+                publish_dir: ./proj/bin/Release/net10.0/browser-wasm/AppBundle
+                enable_jekyll: false
+                allow_empty_commit: false
+                force_orphan: true
+
+
+          #    touch wwwroot/.nojekyll 2>/dev/null || true
+          #    touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll 2>/dev/null || true
+
+          #- name: Deploy to GitHub Pages
+          #  if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          #  uses: peaceiris/actions-gh-pages@v4
+          #  with:
+          #    github_token: ${{ secrets.GITHUB_TOKEN }}
+          #    publish_dir: ./proj/bin/Release/net10.0/browser-wasm/AppBundle
+          #    enable_jekyll: false
+          #    allow_empty_commit: false
+          #    force_orphan: true
+
+
+
+          # - name: Configure SokolNetHome Path
+          #   run: mkdir -p ~/.sokolnet_config && readlink -f Sokol.NET > ~/.sokolnet_config/sokolnet_home
+
+          # - name: Removal of unnecessary files
+          #   run: find . -maxdepth 1 -type f \( -name "*.sln" -o -name "*.csproj" \) ! -name "*Web.csproj" -delete
+
+          # - name: Install required .NET workloads
+          #   run: dotnet workload restore $(ls *Web.csproj)
+
+          ## - name: Restore dependencies
+          ##  run: dotnet restore $(ls *Web.csproj)
+
+          # - name: Prepare shaders
+          #   run: |
+          #     cd Sokol.NET
+          #     dotnet run --project tools/SokolApplicationBuilder -- --task prepare --architecture web --path ".."
+
+          # - name: Compiling .NET Web Assembly
+          #   run: dotnet publish -c Release -r browser-wasm
 
 # jobs:
 #   build:
