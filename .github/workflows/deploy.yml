@@ -1,6 +1,6 @@
-name: Webversion and Deploy
+name: Deploy to GitHub Pages
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
     build:
@@ -20,11 +20,11 @@ jobs:
               path: Sokol.NET
               #VERY SLOW submodules: recursive
 
+
           - name: Setup .NET SDK
             uses: actions/setup-dotnet@v4
             with:
               dotnet-version: '10.0.x' #TODO global.json
-
 
 
           - name: Cache NuGet Packages
