@@ -36,23 +36,11 @@ jobs:
         rm -f *.sln
         find . -maxdepth 1 -type f -name "*.csproj" ! -name "*Web.csproj" -delete
 
-    - name: Install WASM Tools workload
-      run: |
-        cd project
-        dotnet workload restore
-
-    - name: Restore dependencies
-      run: |
-        cd project
-        dotnet restore
-
+    # ОДНА КОМАНДА ДЛЯ ВСЕГО: Она сама всё восстановит, подтянет ворклоады и скомпилирует бандл!
     - name: Build webversion
       run: |
         cd project
-        # Компилируем веб-версию
         dotnet publish -c Release -r browser-wasm
-        
-        # Жестко создаем маркеры .nojekyll везде, чтобы обойти блокировку серверов GitHub
         touch wwwroot/.nojekyll
         touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll
 
@@ -61,7 +49,6 @@ jobs:
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        # МЕНЯЕМ ПУТЬ: Берем чистый, сгенерированный компилятором .NET пакет напрямую!
         publish_dir: ./project/bin/Release/net10.0/browser-wasm/AppBundle
         enable_jekyll: false
         allow_empty_commit: false
