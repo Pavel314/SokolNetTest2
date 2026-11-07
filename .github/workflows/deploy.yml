@@ -3,53 +3,86 @@ name: Webversion and Deploy
 on: [push, pull_request]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-    - name: Checkout Sokol.NET Framework
-      uses: actions/checkout@v4
-      with:
-        repository: elix22/Sokol.NET
-        path: framework
+    build:
+        runs-on: ubuntu-latest
+#       permissions:
+#       contents: write
+        steps:
+          - name: checkout
+            uses: actions/checkout@v4
 
-    - name: Checkout your project code
-      uses: actions/checkout@v4
-      with:
-        path: project
+          - name: Setup .NET SDK
+            uses: actions/setup-dotnet@v4
+            with:
+              dotnet-version: '10.0.x' #TODO global.json
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
+          - name: Install required .NET workloads
+            run: dotnet workload restore $(ls *Web.csproj)
 
-    - name: Configure SokolNetHome Path
-      run: |
-        mkdir -p ~/.sokolnet_config
-        echo "${{ github.workspace }}/framework" > ~/.sokolnet_config/sokolnet_home
+          - name: Restore dependencies
+            run: dotnet restore $(ls *Web.csproj)
 
-    - name: Purge solution and non-web projects
-      run: |
-        cd project
-        echo "Purging non-web files..."
-        rm -f *.sln
-        find . -maxdepth 1 -type f -name "*.csproj" ! -name "*Web.csproj" -delete
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#     - name: Checkout Sokol.NET Framework
+#       uses: actions/checkout@v4
+#       with:
+#         repository: elix22/Sokol.NET
+#         path: framework
 
-    # ОДНА КОМАНДА ДЛЯ ВСЕГО: Она сама всё восстановит, подтянет ворклоады и скомпилирует бандл!
-    - name: Build webversion
-      run: |
-        cd project
-        dotnet publish -c Release -r browser-wasm
-        touch wwwroot/.nojekyll
-        touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll
+#     - name: Checkout your project code
+#       uses: actions/checkout@v4
+#       with:
+#         path: project
 
-    - name: Deploy to GitHub Pages
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./project/bin/Release/net10.0/browser-wasm/AppBundle
-        enable_jekyll: false
-        allow_empty_commit: false
-        force_orphan: true
+#     - name: Setup .NET SDK
+#       uses: actions/setup-dotnet@v4
+#       with:
+#         dotnet-version: '10.0.x'
+
+#     - name: Configure SokolNetHome Path
+#       run: |
+#         mkdir -p ~/.sokolnet_config
+#         echo "${{ github.workspace }}/framework" > ~/.sokolnet_config/sokolnet_home
+
+#     - name: Purge solution and non-web projects
+#       run: |
+#         cd project
+#         echo "Purging non-web files..."
+#         rm -f *.sln
+#         find . -maxdepth 1 -type f -name "*.csproj" ! -name "*Web.csproj" -delete
+
+#     - name: Install WASM Tools workload
+#       run: |
+#         cd project
+#         dotnet workload restore
+
+#     - name: Restore dependencies
+#       run: |
+#         cd project
+#         dotnet restore
+
+#     - name: Build webversion
+#       run: |
+#         cd project
+#         Компилируем веб-версию
+#         dotnet publish -c Release -r browser-wasm
+        
+#         Жестко создаем маркеры .nojekyll везде, чтобы обойти блокировку серверов GitHub
+#         touch wwwroot/.nojekyll
+#         touch bin/Release/net10.0/browser-wasm/AppBundle/.nojekyll
+
+#     - name: Deploy to GitHub Pages
+#       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+#       uses: peaceiris/actions-gh-pages@v4
+#       with:
+#         github_token: ${{ secrets.GITHUB_TOKEN }}
+#         МЕНЯЕМ ПУТЬ: Берем чистый, сгенерированный компилятором .NET пакет напрямую!
+#         publish_dir: ./project/bin/Release/net10.0/browser-wasm/AppBundle
+#         enable_jekyll: false
+#         allow_empty_commit: false
+#         force_orphan: true
